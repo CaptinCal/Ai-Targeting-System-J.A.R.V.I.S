@@ -590,6 +590,15 @@ if ("speechSynthesis" in window) {
    JARVIS SPEAK
 ========================================== */
 
+/*
+   currentUtterance is kept OUTSIDE jarvisSpeak
+   on purpose. iOS Safari has a long-standing bug
+   where it silently garbage-collects an utterance
+   that's only referenced by a local variable,
+   which cuts speech off with no error at all.
+*/
+let currentUtterance = null;
+
 function jarvisSpeak(text) {
 
     jarvisMessage.textContent =
@@ -605,44 +614,56 @@ function jarvisSpeak(text) {
 
     speechSynthesis.cancel();
 
-    speechSynthesis.resume();
-
     loadVoices();
 
-    const msg =
-        new SpeechSynthesisUtterance(text);
+    /*
+       iOS Safari silently drops speak() if it's
+       called in the same tick right after cancel().
+       A tiny delay fixes it. Harmless on other
+       browsers.
+    */
 
-    msg.lang =
-        "en-GB";
+    setTimeout(function() {
 
-    if (jarvisVoice) {
-        msg.voice =
-            jarvisVoice;
-    }
+        const msg =
+            new SpeechSynthesisUtterance(text);
 
-    msg.rate =
-        0.82;
+        currentUtterance =
+            msg;
 
-    msg.pitch =
-        0.82;
+        msg.lang =
+            "en-GB";
 
-    msg.volume =
-        1.0;
+        if (jarvisVoice) {
+            msg.voice =
+                jarvisVoice;
+        }
 
-    msg.onerror =
-        function(event) {
+        msg.rate =
+            0.82;
 
-            console.log(
-                "JARVIS TTS ERROR:",
-                event.error
-            );
+        msg.pitch =
+            0.82;
 
-            jarvisMessage.textContent =
-                "VOICE ERROR: " +
-                event.error;
-        };
+        msg.volume =
+            1.0;
 
-    speechSynthesis.speak(msg);
+        msg.onerror =
+            function(event) {
+
+                console.log(
+                    "JARVIS TTS ERROR:",
+                    event.error
+                );
+
+                jarvisMessage.textContent =
+                    "VOICE ERROR: " +
+                    event.error;
+            };
+
+        speechSynthesis.speak(msg);
+
+    }, 60);
 }
 
 /* ==========================================
