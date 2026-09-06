@@ -646,11 +646,39 @@ function jarvisSpeak(text) {
 }
 
 /* ==========================================
+   SPEECH UNLOCK
+   (Chrome/Safari require speechSynthesis to
+   fire synchronously inside a real click,
+   BEFORE any "await". Calling this first
+   thing inside the click handlers "unlocks"
+   audio for the rest of the session so later
+   async jarvisSpeak() calls actually make sound.)
+========================================== */
+
+function primeSpeech() {
+
+    if (!("speechSynthesis" in window)) {
+        return;
+    }
+
+    loadVoices();
+
+    const unlock =
+        new SpeechSynthesisUtterance(" ");
+
+    unlock.volume = 0;
+
+    speechSynthesis.speak(unlock);
+}
+
+/* ==========================================
    CAMERA
 ========================================== */
 
 start.onclick =
 async function() {
+
+    primeSpeech();
 
     try {
 
@@ -767,7 +795,7 @@ boxCanvas.getContext("2d");
 function detectTargetBox() {
 
     if (
-        camera.readyState <
+        camera.readyState 
         HTMLMediaElement.HAVE_CURRENT_DATA
     ) {
 
@@ -1350,6 +1378,8 @@ if (SpeechRecognition) {
 
 voiceButton.onclick =
 function() {
+
+    primeSpeech();
 
     if (!recognition) {
 
